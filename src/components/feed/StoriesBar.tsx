@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/authStore';
+import { CreateStoryModal } from './CreateStoryModal';
+import { StoryViewer } from './StoryViewer';
 
 const mockStories = [
   { id: '1', username: 'johndoe', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john', hasUnread: true },
@@ -12,29 +15,51 @@ const mockStories = [
   { id: '6', username: 'emma_w', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emma', hasUnread: true },
 ];
 
+// Mock story content for viewer
+const mockStoryContent = mockStories.map((story, index) => ({
+  id: story.id,
+  userId: story.id,
+  username: story.username,
+  avatarUrl: story.avatarUrl,
+  mediaUrl: `https://picsum.photos/seed/${story.username}/1080/1920`,
+  mediaType: 'image' as const,
+  caption: index % 2 === 0 ? 'Check out my latest post!' : undefined,
+  createdAt: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000),
+}));
+
 export const StoriesBar = () => {
   const { user } = useAuthStore();
+  const [createStoryOpen, setCreateStoryOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User';
 
+  const handleStoryClick = (index: number) => {
+    setSelectedStoryIndex(index);
+    setViewerOpen(true);
+  };
+
   return (
-    <div className="border-b border-border bg-card/50 mb-4">
-      <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide">
-        {/* Your story */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          className="flex flex-col items-center gap-1 min-w-[66px]"
-        >
-          <div className="relative">
-            <Avatar className="h-14 w-14">
-              <AvatarImage src={user?.user_metadata?.avatar_url} alt="Your story" />
-              <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary rounded-full border-2 border-card flex items-center justify-center">
-              <Plus className="h-3 w-3 text-primary-foreground" />
+    <>
+      <div className="border-b border-border bg-card/50 mb-4">
+        <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide">
+          {/* Your story */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setCreateStoryOpen(true)}
+            className="flex flex-col items-center gap-1 min-w-[66px]"
+          >
+            <div className="relative">
+              <Avatar className="h-14 w-14">
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt="Your story" />
+                <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary rounded-full border-2 border-card flex items-center justify-center">
+                <Plus className="h-3 w-3 text-primary-foreground" />
+              </div>
             </div>
-          </div>
-          <span className="text-xs">Your story</span>
-        </motion.button>
+            <span className="text-xs">Your story</span>
+          </motion.button>
 
         {/* Other stories */}
         {mockStories.map((story, index) => (
@@ -44,6 +69,7 @@ export const StoriesBar = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => handleStoryClick(index)}
             className="flex flex-col items-center gap-1 min-w-[66px]"
           >
             <div className={`p-0.5 rounded-full ${story.hasUnread ? 'bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600' : 'bg-muted'}`}>
@@ -59,5 +85,14 @@ export const StoriesBar = () => {
         ))}
       </div>
     </div>
+
+    <CreateStoryModal open={createStoryOpen} onOpenChange={setCreateStoryOpen} />
+    <StoryViewer
+      open={viewerOpen}
+      onOpenChange={setViewerOpen}
+      stories={mockStoryContent}
+      initialIndex={selectedStoryIndex}
+    />
+  </>
   );
 };

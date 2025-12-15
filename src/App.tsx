@@ -3,7 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
 import HomePage from "./pages/Home";
 import ReelsPage from "./pages/Reels";
 import MessagesPage from "./pages/Messages";
@@ -14,26 +18,54 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  const { setSession, setLoading } = useAuthStore();
+
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [setSession, setLoading]);
+
+  return (
+    <Routes>
+      <Route path="/auth" element={<AuthPage />} />
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/reels" element={<ReelsPage />} />
+        <Route path="/messages" element={<MessagesPage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/:username" element={<ProfilePage />} />
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/reels" element={<ReelsPage />} />
-            <Route path="/messages" element={<MessagesPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/:username" element={<ProfilePage />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

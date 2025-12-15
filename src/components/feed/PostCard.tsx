@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
+import { CommentsModal } from './CommentsModal';
+import { SharePostDialog } from './SharePostDialog';
+import { SavePostDialog } from './SavePostDialog';
 import type { Post } from '@/types';
 
 interface PostCardProps {
@@ -19,6 +22,9 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
   const [showHeart, setShowHeart] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   const handleLike = () => {
     setLiked(!liked);
@@ -55,9 +61,6 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
             <p className="text-sm font-semibold">{post.author?.username}</p>
           </div>
         </Link>
-        <Button variant="ghost" size="icon" aria-label="More options">
-          <MoreHorizontal className="h-5 w-5" />
-        </Button>
       </div>
 
       {/* Media */}
@@ -128,19 +131,30 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => onComment(post.id)}
+              onClick={() => setCommentsOpen(true)}
               aria-label="Comment"
             >
               <MessageCircle className="h-6 w-6" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Share">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShareOpen(true)}
+              aria-label="Share"
+            >
               <Send className="h-6 w-6" />
             </Button>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => setSaved(!saved)}
+            onClick={() => {
+              if (saved) {
+                setSaved(false);
+              } else {
+                setSaveOpen(true);
+              }
+            }}
             aria-label={saved ? 'Unsave' : 'Save'}
           >
             <Bookmark className={`h-6 w-6 ${saved ? 'fill-foreground' : ''}`} />
@@ -171,7 +185,7 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
         {/* Comments preview */}
         {post.commentsCount > 0 && (
           <button
-            onClick={() => onComment(post.id)}
+            onClick={() => setCommentsOpen(true)}
             className="text-sm text-muted-foreground"
           >
             View all {post.commentsCount} comments
@@ -181,6 +195,29 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
         {/* Time */}
         <p className="text-xs text-muted-foreground">{timeAgo}</p>
       </div>
+
+      {/* Modals */}
+      <CommentsModal
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        postId={post.id}
+        postImage={post.media[0]?.url}
+      />
+      <SharePostDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        postId={post.id}
+        postImage={post.media[0]?.url}
+      />
+      <SavePostDialog
+        open={saveOpen}
+        onOpenChange={(open) => {
+          setSaveOpen(open);
+          if (!open) setSaved(true);
+        }}
+        postId={post.id}
+        postImage={post.media[0]?.url}
+      />
     </motion.article>
   );
 };

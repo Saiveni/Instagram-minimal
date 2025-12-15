@@ -1,0 +1,37 @@
+/* ...existing code... */
+
+/* Make interactive elements more obvious */
+.post-actions button {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.post-actions button:hover {
+    transform: scale(1.1);
+}
+
+.post-actions button:active {
+    transform: scale(0.95);
+}
+
+.story {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.story:hover {
+    transform: scale(1.05);
+}
+
+.post-header {
+    cursor: pointer;
+}
+
+.post-header:hover strong {
+    text-decoration: underline;
+}
+
+/* Add smooth color transition for like button */
+.like-btn i {
+    transition: color 0.3s ease;
+}
