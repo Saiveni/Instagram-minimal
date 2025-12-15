@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { useStoriesStore } from '@/stores/storiesStore';
 
 interface CreateStoryModalProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface CreateStoryModalProps {
 
 export const CreateStoryModal = ({ open, onOpenChange }: CreateStoryModalProps) => {
   const { user } = useAuthStore();
+  const { addStory } = useStoriesStore();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
@@ -46,15 +48,24 @@ export const CreateStoryModal = ({ open, onOpenChange }: CreateStoryModalProps) 
   };
 
   const handleSubmit = async () => {
-    if (!file) {
+    if (!file || !user) {
       toast.error('Please select a file');
       return;
     }
 
     setUploading(true);
     try {
-      // In a real app, this would upload to storage and create story
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Add story to store with preview
+      addStory({
+        id: `story-${Date.now()}`,
+        userId: user.id,
+        username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
+        avatarUrl: user.user_metadata?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+        mediaUrl: preview,
+        mediaType: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
+        caption: caption || undefined,
+        createdAt: new Date()
+      });
       
       toast.success('Story posted successfully!');
       onOpenChange(false);

@@ -17,38 +17,8 @@ interface ConversationListProps {
 }
 
 // Mock users data for search
-const mockUsers = [
-  {
-    uid: '3',
-    username: 'alice_smith',
-    displayName: 'Alice Smith',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice',
-  },
-  {
-    uid: '4',
-    username: 'bob_jones',
-    displayName: 'Bob Jones',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob',
-  },
-  {
-    uid: '5',
-    username: 'charlie_brown',
-    displayName: 'Charlie Brown',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=charlie',
-  },
-  {
-    uid: '6',
-    username: 'diana_prince',
-    displayName: 'Diana Prince',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=diana',
-  },
-  {
-    uid: '7',
-    username: 'evan_peters',
-    displayName: 'Evan Peters',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=evan',
-  },
-];
+// Real users will be fetched from database
+const mockUsers: any[] = [];
 
 export const ConversationList = ({ conversations, selectedId, currentUserId, onSelect }: ConversationListProps) => {
   const [searchQuery, setSearchQuery] = useState('');

@@ -6,11 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
 import { toast } from 'sonner';
 
 export const CreatePostModal = () => {
   const { createPostOpen, setCreatePostOpen } = useUIStore();
   const { user } = useAuthStore();
+  const { addPost } = usePostsStore();
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
@@ -19,10 +21,6 @@ export const CreatePostModal = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
-    if (selectedFiles.length + files.length > 10) {
-      toast.error('Maximum 10 files allowed');
-      return;
-    }
 
     setFiles([...files, ...selectedFiles]);
     
@@ -45,7 +43,21 @@ export const CreatePostModal = () => {
 
     setUploading(true);
     try {
-      // TODO: Implement post creation with Supabase storage
+      // Add post to store with current previews
+      addPost({
+        user: {
+          id: user.id,
+          username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
+          avatar: user.user_metadata?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+          fullName: user.user_metadata?.display_name || user.user_metadata?.username || 'User'
+        },
+        caption,
+        media: previews.map((preview, index) => ({
+          url: preview,
+          type: files[index].type.startsWith('video/') ? 'video' as const : 'image' as const
+        }))
+      });
+      
       toast.success('Post created!');
       setCreatePostOpen(false);
       setFiles([]);

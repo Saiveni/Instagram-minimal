@@ -1,12 +1,21 @@
 import { ProfileView } from '@/components/profile/ProfileView';
 import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useMemo } from 'react';
 
 const ProfilePage = () => {
   const { user, loading } = useAuthStore();
+  const { posts } = usePostsStore();
   const { toast } = useToast();
+
+  // Filter posts by current user
+  const userPosts = useMemo(() => 
+    posts.filter(post => post.authorId === user?.id),
+    [posts, user?.id]
+  );
 
   if (loading) {
     return (
@@ -28,7 +37,7 @@ const ProfilePage = () => {
     displayName: displayName,
     avatarUrl: user.user_metadata?.avatar_url || '',
     bio: 'Welcome to my profile!',
-    stats: { posts: 0, followers: 0, following: 0 },
+    stats: { posts: userPosts.length, followers: 0, following: 0 },
     createdAt: new Date(user.created_at),
   };
 
@@ -47,7 +56,7 @@ const ProfilePage = () => {
     <div>
       <ProfileView
         profile={mockProfile}
-        posts={[]}
+        posts={userPosts}
         reels={[]}
         isOwnProfile={true}
         isFollowing={false}

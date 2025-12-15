@@ -1,63 +1,19 @@
 import { useState, useEffect } from 'react';
 import { StoriesBar } from '@/components/feed/StoriesBar';
 import { PostCard } from '@/components/feed/PostCard';
+import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
 import type { Post } from '@/types';
 
-// Mock data for demo purposes (no auth required)
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    authorId: 'user1',
-    author: {
-      uid: 'user1',
-      username: 'johndoe',
-      displayName: 'John Doe',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop',
-      bio: 'Photography enthusiast',
-      stats: { posts: 42, followers: 1234, following: 567 },
-      createdAt: new Date(),
-    },
-    media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=600&h=600&fit=crop' }],
-    caption: 'Beautiful sunset views 🌅',
-    tags: [],
-    likesCount: 128,
-    commentsCount: 24,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    authorId: 'user2',
-    author: {
-      uid: 'user2',
-      username: 'janedoe',
-      displayName: 'Jane Doe',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
-      bio: 'Travel lover',
-      stats: { posts: 78, followers: 2345, following: 890 },
-      createdAt: new Date(),
-    },
-    media: [{ type: 'image', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop' }],
-    caption: 'Mountain adventures await! ⛰️',
-    tags: [],
-    likesCount: 256,
-    commentsCount: 42,
-    createdAt: new Date(),
-  },
-];
-
 const HomePage = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const { user } = useAuthStore();
+  const { posts } = usePostsStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading with mock data
-    const timer = setTimeout(() => {
-      setPosts(mockPosts);
-      setLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
+    // Simulate loading
+    setTimeout(() => setLoading(false), 500);
+  }, [user]);
 
   const handleLike = (postId: string) => {
     console.log('Like post:', postId);
@@ -84,8 +40,26 @@ const HomePage = () => {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-4">
+            <svg
+              className="h-10 w-10 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
+          <p className="text-muted-foreground">
+            When you follow people or create posts, you'll see them here
+          </p>
         </div>
       ) : (
         posts.map((post) => (

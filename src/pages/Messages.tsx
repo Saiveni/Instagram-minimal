@@ -4,50 +4,9 @@ import { ChatWindow } from '@/components/messages/ChatWindow';
 import { useAuthStore } from '@/stores/authStore';
 import type { Conversation, Message } from '@/types';
 
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    participants: ['current', '1'],
-    participantProfiles: [
-      {
-        uid: '1',
-        username: 'johndoe',
-        displayName: 'John Doe',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
-        bio: '',
-        stats: { posts: 0, followers: 0, following: 0 },
-        createdAt: new Date(),
-      },
-    ],
-    lastMessage: 'Hey! How are you?',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 5),
-  },
-  {
-    id: '2',
-    participants: ['current', '2'],
-    participantProfiles: [
-      {
-        uid: '2',
-        username: 'janedoe',
-        displayName: 'Jane Doe',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane',
-        bio: '',
-        stats: { posts: 0, followers: 0, following: 0 },
-        createdAt: new Date(),
-      },
-    ],
-    lastMessage: 'See you tomorrow!',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-];
-
-const mockMessages: Message[] = [
-  { id: '1', conversationId: '1', senderId: '1', text: 'Hey there!', createdAt: new Date(Date.now() - 1000 * 60 * 10), readBy: [] },
-  { id: '2', conversationId: '1', senderId: 'current', text: 'Hi! What\'s up?', createdAt: new Date(Date.now() - 1000 * 60 * 8), readBy: [] },
-  { id: '3', conversationId: '1', senderId: '1', text: 'Not much, just chilling. You?', createdAt: new Date(Date.now() - 1000 * 60 * 6), readBy: [] },
-  { id: '4', conversationId: '1', senderId: 'current', text: 'Same here, working on some projects.', createdAt: new Date(Date.now() - 1000 * 60 * 5), readBy: [] },
-  { id: '5', conversationId: '1', senderId: '1', text: 'Hey! How are you?', createdAt: new Date(Date.now() - 1000 * 60 * 2), readBy: [] },
-];
+// Real conversations will be fetched from database
+const mockConversations: Conversation[] = [];
+const mockMessages: Message[] = [];
 
 const MessagesPage = () => {
   const { user } = useAuthStore();

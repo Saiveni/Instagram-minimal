@@ -21,33 +21,8 @@ interface SharePostDialogProps {
   postImage?: string;
 }
 
-// Mock users for sharing
-const mockUsers: User[] = [
-  {
-    uid: '1',
-    username: 'johndoe',
-    displayName: 'John Doe',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
-  },
-  {
-    uid: '2',
-    username: 'janedoe',
-    displayName: 'Jane Doe',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane',
-  },
-  {
-    uid: '3',
-    username: 'alice_smith',
-    displayName: 'Alice Smith',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice',
-  },
-  {
-    uid: '4',
-    username: 'bob_jones',
-    displayName: 'Bob Jones',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob',
-  },
-];
+// Real users will be fetched from database
+const mockUsers: User[] = [];
 
 export const SharePostDialog = ({ open, onOpenChange, postId, postImage }: SharePostDialogProps) => {
   const [searchQuery, setSearchQuery] = useState('');

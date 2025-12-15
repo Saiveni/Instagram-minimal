@@ -23,6 +23,7 @@ export interface Post {
   commentsCount: number;
   createdAt: Date;
   likedBy?: string[];
+  likes?: string[];
 }
 
 export interface MediaItem {

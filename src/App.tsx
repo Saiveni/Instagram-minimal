@@ -19,7 +19,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { setSession, setLoading } = useAuthStore();
+  const { setSession, setLoading, user, loading } = useAuthStore();
 
   useEffect(() => {
     // Check for existing session
@@ -39,9 +39,25 @@ const AppContent = () => {
     return () => subscription.unsubscribe();
   }, [setSession, setLoading]);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show auth page if not logged in
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="*" element={<AuthPage />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
-      <Route path="/auth" element={<AuthPage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/reels" element={<ReelsPage />} />

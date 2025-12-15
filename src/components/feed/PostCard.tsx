@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
 import { CommentsModal } from './CommentsModal';
 import { SharePostDialog } from './SharePostDialog';
 import { SavePostDialog } from './SavePostDialog';
@@ -12,11 +20,13 @@ import type { Post } from '@/types';
 
 interface PostCardProps {
   post: Post;
-  onLike: (postId: string) => void;
-  onComment: (postId: string) => void;
+  onLike?: (postId: string) => void;
+  onComment?: (postId: string) => void;
 }
 
 export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
+  const { user } = useAuthStore();
+  const { likePost, unlikePost, deletePost } = usePostsStore();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
@@ -26,18 +36,42 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
   const [shareOpen, setShareOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
 
+  useEffect(() => {
+    if (user && post.likes) {
+      setLiked(post.likes.includes(user.id));
+    }
+  }, [user, post.likes]);
+
   const handleLike = () => {
-    setLiked(!liked);
-    onLike(post.id);
+    if (!user) return;
+    
+    const newLikedState = !liked;
+    setLiked(newLikedState);
+    
+    if (newLikedState) {
+      likePost(post.id, user.id);
+    } else {
+      unlikePost(post.id, user.id);
+    }
+    
+    onLike?.(post.id);
   };
 
   const handleDoubleTap = () => {
-    if (!liked) {
-      setLiked(true);
-      onLike(post.id);
-    }
+    if (!user || liked) return;
+    
+    setLiked(true);
+    likePost(post.id, user.id);
+    onLike?.(post.id);
+    
     setShowHeart(true);
     setTimeout(() => setShowHeart(false), 1000);
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this post?')) {
+      deletePost(post.id);
+    }
   };
 
   const timeAgo = formatDistanceToNow(post.createdAt, { addSuffix: true });
@@ -61,6 +95,22 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
             <p className="text-sm font-semibold">{post.author?.username}</p>
           </div>
         </Link>
+        
+        {user?.id === post.authorId && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Post
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Media */}
