@@ -16,6 +16,7 @@ import SearchPage from "./pages/Search";
 import ProfilePage from "./pages/Profile";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import NotificationsPage from '@/pages/Notifications';
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,7 @@ const AppContent = () => {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

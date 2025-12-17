@@ -110,22 +110,22 @@ export const useUsersStore = create<UsersState>()(
             if (!str) return null;
             const { state } = JSON.parse(str);
             
-            // Validate that users is an array
-            if (!state.users || !Array.isArray(state.users)) {
-              console.warn('Invalid users data in localStorage, resetting...');
+            // Validate the state structure
+            if (!state || typeof state !== 'object') {
+              console.warn('Invalid state in localStorage, resetting...');
               return null;
             }
             
             return {
               state: {
-                ...state,
-                users: state.users.map((user: any) => ({
+                users: Array.isArray(state.users) ? state.users.map((user: Record<string, unknown>) => ({
                   ...user,
-                  createdAt: new Date(user.createdAt)
-                }))
+                  createdAt: typeof user.createdAt === 'string' ? new Date(user.createdAt) : user.createdAt
+                })) : [],
+                following: state.following || {},
               }
             };
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Error loading users from localStorage:', error);
             return null;
           }
@@ -133,7 +133,7 @@ export const useUsersStore = create<UsersState>()(
         setItem: (name, value) => {
           try {
             localStorage.setItem(name, JSON.stringify(value));
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Error saving users to localStorage:', error);
           }
         },

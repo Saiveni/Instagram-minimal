@@ -9,6 +9,8 @@ import { useUsersStore } from '@/stores/usersStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useNavigate } from 'react-router-dom';
 import { Film } from 'lucide-react';
+import { PostDetailModal } from '@/components/feed/PostDetailModal';
+import type { Post } from '@/types';
 
 const SearchPage = () => {
   const { posts } = usePostsStore();
@@ -16,6 +18,8 @@ const SearchPage = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [postDetailOpen, setPostDetailOpen] = useState(false);
 
   // Filter posts based on search query
   const filteredPosts = posts.filter(post => 
@@ -41,9 +45,9 @@ const SearchPage = () => {
     }
   };
 
-  const handlePostClick = (postId: string) => {
-    // Navigate to post detail or open modal
-    console.log('Open post:', postId);
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setPostDetailOpen(true);
   };
 
   return (
@@ -81,7 +85,7 @@ const SearchPage = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.02 }}
-                    onClick={() => handlePostClick(post.id)}
+                    onClick={() => handlePostClick(post)}
                     className="relative aspect-square bg-muted cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
                   >
                     {isVideo ? (
@@ -148,6 +152,12 @@ const SearchPage = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <PostDetailModal
+        open={postDetailOpen}
+        onOpenChange={setPostDetailOpen}
+        post={selectedPost}
+      />
     </div>
   );
 };

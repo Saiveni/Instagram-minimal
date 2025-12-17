@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import type { UserProfile, Post, Reel } from '@/types';
 import { toast } from 'sonner';
+import { PostDetailModal } from '@/components/feed/PostDetailModal';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -42,6 +43,8 @@ export const ProfileView = ({
   });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [postDetailOpen, setPostDetailOpen] = useState(false);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,6 +72,11 @@ export const ProfileView = ({
     if (onSignOut) {
       onSignOut();
     }
+  };
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setPostDetailOpen(true);
   };
 
   return (
@@ -243,6 +251,7 @@ export const ProfileView = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
+                  onClick={() => handlePostClick(post)}
                   className="aspect-square bg-muted cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
                 >
                   {post.media[0]?.type === 'video' ? (
@@ -303,6 +312,12 @@ export const ProfileView = ({
           </TabsContent>
         )}
       </Tabs>
+
+      <PostDetailModal
+        open={postDetailOpen}
+        onOpenChange={setPostDetailOpen}
+        post={selectedPost}
+      />
     </div>
   );
 };

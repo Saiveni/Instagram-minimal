@@ -96,22 +96,22 @@ export const useStoriesStore = create<StoriesState>()(
             if (!str) return null;
             const { state } = JSON.parse(str);
             
-            // Validate that stories is an array
-            if (!state.stories || !Array.isArray(state.stories)) {
-              console.warn('Invalid stories data in localStorage, resetting...');
+            // Validate and transform the state
+            if (!state || typeof state !== 'object') {
+              console.warn('Invalid state in localStorage, resetting...');
               return null;
             }
             
             return {
               state: {
-                ...state,
-                stories: state.stories.map((story: any) => ({
+                stories: Array.isArray(state.stories) ? state.stories.map((story: Record<string, unknown>) => ({
                   ...story,
-                  createdAt: new Date(story.createdAt)
-                }))
+                  createdAt: typeof story.createdAt === 'string' ? new Date(story.createdAt) : story.createdAt,
+                  views: Array.isArray(story.views) ? story.views : []
+                })) : []
               }
             };
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Error loading stories from localStorage:', error);
             return null;
           }
@@ -119,7 +119,7 @@ export const useStoriesStore = create<StoriesState>()(
         setItem: (name, value) => {
           try {
             localStorage.setItem(name, JSON.stringify(value));
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Error saving stories to localStorage:', error);
           }
         },

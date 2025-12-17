@@ -39,16 +39,17 @@ export const Header = () => {
           )}
 
           {user ? (
-            <NotificationsPopover>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-muted-foreground hover:text-foreground" 
-                aria-label="Notifications"
-              >
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              asChild
+              className="text-muted-foreground hover:text-foreground" 
+              aria-label="Notifications"
+            >
+              <Link to="/notifications">
                 <Heart className="h-5 w-5" />
-              </Button>
-            </NotificationsPopover>
+              </Link>
+            </Button>
           ) : (
             <Button 
               variant="ghost" 
@@ -137,16 +138,17 @@ export const Header = () => {
         {/* Mobile: Show notifications, messages, theme toggle */}
         <div className="flex md:hidden items-center gap-1">
           {user ? (
-            <NotificationsPopover>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-muted-foreground hover:text-foreground" 
-                aria-label="Notifications"
-              >
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              asChild
+              className="text-muted-foreground hover:text-foreground" 
+              aria-label="Notifications"
+            >
+              <Link to="/notifications">
                 <Heart className="h-5 w-5" />
-              </Button>
-            </NotificationsPopover>
+              </Link>
+            </Button>
           ) : (
             <Button 
               variant="ghost" 
