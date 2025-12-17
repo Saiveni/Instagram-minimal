@@ -1,74 +1,28 @@
-import { useState, useRef, useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ReelCard } from '@/components/reels/ReelCard';
-import type { Reel, UserProfile } from '@/types';
-
-const mockReels: Reel[] = [
-  {
-    id: '1',
-    authorId: '1',
-    author: {
-      uid: '1',
-      username: 'nature_vibes',
-      displayName: 'Nature Vibes',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nature',
-      bio: '',
-      stats: { posts: 0, followers: 0, following: 0 },
-      createdAt: new Date(),
-    },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    caption: 'Amazing sunset views 🌅 #nature #sunset #vibes',
-    tags: ['nature', 'sunset', 'vibes'],
-    likesCount: 12453,
-    commentsCount: 234,
-    viewsCount: 89234,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    authorId: '2',
-    author: {
-      uid: '2',
-      username: 'travel_addict',
-      displayName: 'Travel Addict',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=travel',
-      bio: '',
-      stats: { posts: 0, followers: 0, following: 0 },
-      createdAt: new Date(),
-    },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    caption: 'Exploring the world one city at a time ✈️ #travel #explore',
-    tags: ['travel', 'explore'],
-    likesCount: 8932,
-    commentsCount: 156,
-    viewsCount: 45678,
-    createdAt: new Date(),
-  },
-  {
-    id: '3',
-    authorId: '3',
-    author: {
-      uid: '3',
-      username: 'foodie_life',
-      displayName: 'Foodie Life',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=food',
-      bio: '',
-      stats: { posts: 0, followers: 0, following: 0 },
-      createdAt: new Date(),
-    },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    caption: 'The most delicious dish I have ever made! 🍝 #food #cooking',
-    tags: ['food', 'cooking'],
-    likesCount: 5621,
-    commentsCount: 89,
-    viewsCount: 23456,
-    createdAt: new Date(),
-  },
-];
+import { usePostsStore } from '@/stores/postsStore';
+import type { Reel } from '@/types';
 
 const ReelsPage = () => {
-  const [reels, setReels] = useState<Reel[]>(mockReels);
+  const { posts } = usePostsStore();
+  
+  // Convert video posts to reels format
+  const reels = useMemo(() => {
+    return posts
+      .filter(post => post.media.some(media => media.type === 'video'))
+      .map(post => ({
+        id: post.id,
+        authorId: post.authorId,
+        author: post.author,
+        videoUrl: post.media.find(media => media.type === 'video')?.url || '',
+        caption: post.caption,
+        tags: post.tags,
+        likesCount: post.likesCount,
+        commentsCount: post.commentsCount,
+        viewsCount: 0,
+        createdAt: post.createdAt,
+      } as Reel));
+  }, [posts]);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +40,32 @@ const ReelsPage = () => {
     container?.addEventListener('scroll', handleScroll);
     return () => container?.removeEventListener('scroll', handleScroll);
   }, []);
+
+  if (reels.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] text-center px-4">
+        <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-4">
+          <svg
+            className="h-10 w-10 text-muted-foreground"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+            />
+          </svg>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">No Reels Yet</h3>
+        <p className="text-muted-foreground">
+          When people post videos, they'll appear here as reels
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

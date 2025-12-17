@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Search, Film, MessageCircle, PlusSquare, Heart, User, LogIn, Moon, Sun } from 'lucide-react';
+import { Home, Search, Film, MessageCircle, PlusSquare, Heart, User, LogIn, Moon, Sun, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
+import { UsersPopover } from '@/components/notifications/UsersPopover';
 
 export const Header = () => {
   const { user } = useAuthStore();
@@ -57,6 +58,29 @@ export const Header = () => {
               onClick={() => alert('Please sign in to view notifications')}
             >
               <Heart className="h-5 w-5" />
+            </Button>
+          )}
+
+          {user ? (
+            <UsersPopover>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-muted-foreground hover:text-foreground" 
+                aria-label="Users"
+              >
+                <Users className="h-5 w-5" />
+              </Button>
+            </UsersPopover>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-muted-foreground hover:text-foreground" 
+              aria-label="Users"
+              onClick={() => alert('Please sign in to view users')}
+            >
+              <Users className="h-5 w-5" />
             </Button>
           )}
 

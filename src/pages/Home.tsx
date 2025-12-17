@@ -58,7 +58,7 @@ const HomePage = () => {
           </div>
           <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
           <p className="text-muted-foreground">
-            When you follow people or create posts, you'll see them here
+            When people create posts, you'll see them here
           </p>
         </div>
       ) : (

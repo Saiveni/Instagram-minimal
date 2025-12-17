@@ -13,7 +13,7 @@ interface ReelCardProps {
 export const ReelCard = ({ reel, isActive }: ReelCardProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [liked, setLiked] = useState(false);
 
   useEffect(() => {

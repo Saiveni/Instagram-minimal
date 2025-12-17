@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, Heart, Send, MoreHorizontal, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { X, Heart, Send, MoreHorizontal, ChevronLeft, ChevronRight, Pause, Play, Eye } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuthStore } from '@/stores/authStore';
+import { useStoriesStore } from '@/stores/storiesStore';
 
 interface Story {
   id: string;
@@ -16,6 +18,8 @@ interface Story {
   mediaType: 'image' | 'video';
   caption?: string;
   createdAt: Date;
+  views?: string[];
+  viewsCount?: number;
 }
 
 interface StoryViewerProps {
@@ -23,16 +27,28 @@ interface StoryViewerProps {
   onOpenChange: (open: boolean) => void;
   stories: Story[];
   initialIndex?: number;
+  isOwnStory?: boolean;
 }
 
-export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0 }: StoryViewerProps) => {
+export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isOwnStory = false }: StoryViewerProps) => {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [showViews, setShowViews] = useState(false);
+  const { user } = useAuthStore();
+  const { addView } = useStoriesStore();
 
   const currentStory = stories[currentStoryIndex];
   const duration = 5000; // 5 seconds per story
+
+  // Track story view when story changes
+  useEffect(() => {
+    if (open && currentStory && user && !isOwnStory) {
+      addView(currentStory.id, user.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentStory?.id, user?.id, isOwnStory]);
 
   useEffect(() => {
     if (!open || isPaused) return;
@@ -61,6 +77,7 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0 }: S
     if (open) {
       setCurrentStoryIndex(initialIndex);
       setProgress(0);
+      setShowViews(false);
     }
   }, [open, initialIndex]);
 
@@ -127,6 +144,12 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0 }: S
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {isOwnStory && currentStory.viewsCount !== undefined && (
+                <div className="flex items-center gap-1 text-white text-sm">
+                  <Eye className="h-4 w-4" />
+                  <span>{currentStory.viewsCount}</span>
+                </div>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

@@ -81,10 +81,48 @@ export const usePostsStore = create<PostsState>()(
     }),
     {
       name: 'posts-storage',
-      onRehydrateStorage: () => (state) => {
-        // Silently handle any storage errors
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            const { state } = JSON.parse(str);
+            
+            // Validate that posts is an array
+            if (!state.posts || !Array.isArray(state.posts)) {
+              console.warn('Invalid posts data in localStorage, resetting...');
+              return null;
+            }
+            
+            return {
+              state: {
+                ...state,
+                posts: state.posts.map((post: any) => ({
+                  ...post,
+                  createdAt: new Date(post.createdAt),
+                  author: post.author ? {
+                    ...post.author,
+                    createdAt: new Date(post.author.createdAt)
+                  } : undefined
+                }))
+              }
+            };
+          } catch (error) {
+            console.error('Error loading posts from localStorage:', error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (error) {
+            console.error('Error saving posts to localStorage:', error);
+          }
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+        },
       },
-      partialize: (state) => ({ posts: state.posts }),
     }
   )
 );

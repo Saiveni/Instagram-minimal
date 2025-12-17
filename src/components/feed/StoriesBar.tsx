@@ -13,6 +13,7 @@ export const StoriesBar = () => {
   const [createStoryOpen, setCreateStoryOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [isOwnStory, setIsOwnStory] = useState(false);
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User';
 
   // Get all stories grouped by user
@@ -26,6 +27,7 @@ export const StoriesBar = () => {
 
   const handleStoryClick = (userId: string) => {
     setSelectedUserId(userId);
+    setIsOwnStory(userId === user?.id);
     setViewerOpen(true);
   };
 
@@ -96,6 +98,7 @@ export const StoriesBar = () => {
       onOpenChange={setViewerOpen}
       stories={viewerStories}
       initialIndex={0}
+      isOwnStory={isOwnStory}
     />
   </>
   );

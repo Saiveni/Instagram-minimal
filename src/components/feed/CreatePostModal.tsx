@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
+import { useUsersStore } from '@/stores/usersStore';
 import { toast } from 'sonner';
 
 export const CreatePostModal = () => {
   const { createPostOpen, setCreatePostOpen } = useUIStore();
   const { user } = useAuthStore();
   const { addPost } = usePostsStore();
+  const { getUser } = useUsersStore();
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
@@ -43,13 +45,20 @@ export const CreatePostModal = () => {
 
     setUploading(true);
     try {
+      const username = user.user_metadata?.username || user.email?.split('@')[0] || 'user';
+      const fullName = user.user_metadata?.display_name || user.user_metadata?.username || 'User';
+      
+      // Get the stored user to use their current avatar
+      const storedUser = getUser(user.id);
+      const avatar = storedUser?.avatarUrl || user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+      
       // Add post to store with current previews
       addPost({
         user: {
           id: user.id,
-          username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
-          avatar: user.user_metadata?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-          fullName: user.user_metadata?.display_name || user.user_metadata?.username || 'User'
+          username: username,
+          avatar: avatar,
+          fullName: fullName
         },
         caption,
         media: previews.map((preview, index) => ({
@@ -58,7 +67,7 @@ export const CreatePostModal = () => {
         }))
       });
       
-      toast.success('Post created!');
+      toast.success('Post created successfully!');
       setCreatePostOpen(false);
       setFiles([]);
       setPreviews([]);

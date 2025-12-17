@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Grid, Film, Bookmark, Camera, Loader2 } from 'lucide-react';
+import { Settings, Grid, Film, Bookmark, Camera, Loader2, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +20,7 @@ interface ProfileViewProps {
   isFollowing: boolean;
   onFollow: () => void;
   onEditProfile: (data: Partial<UserProfile>) => void;
+  onSignOut?: () => void;
 }
 
 export const ProfileView = ({
@@ -30,8 +31,10 @@ export const ProfileView = ({
   isFollowing,
   onFollow,
   onEditProfile,
+  onSignOut,
 }: ProfileViewProps) => {
   const [editOpen, setEditOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [editData, setEditData] = useState({
     displayName: profile.displayName,
     bio: profile.bio,
@@ -59,6 +62,13 @@ export const ProfileView = ({
     onEditProfile(editData);
     setEditOpen(false);
     toast.success('Profile updated');
+  };
+
+  const handleSignOut = () => {
+    setSettingsOpen(false);
+    if (onSignOut) {
+      onSignOut();
+    }
   };
 
   return (
@@ -136,9 +146,27 @@ export const ProfileView = ({
                     </div>
                   </DialogContent>
                 </Dialog>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-5 w-5" />
-                </Button>
+                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Settings</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 py-4">
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-destructive/10 transition-colors text-destructive font-semibold"
+                      >
+                        <LogOut className="h-5 w-5" />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             ) : (
               <Button
@@ -215,14 +243,23 @@ export const ProfileView = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="aspect-square bg-muted cursor-pointer hover:opacity-90 transition-opacity"
+                  className="aspect-square bg-muted cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
                 >
-                  <img
-                    src={post.media[0]?.url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  {post.media[0]?.type === 'video' ? (
+                    <video
+                      src={post.media[0]?.url}
+                      className="w-full h-full object-cover"
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={post.media[0]?.url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
                 </motion.div>
               ))}
             </div>

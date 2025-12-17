@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { useStoriesStore } from '@/stores/storiesStore';
+import { useUsersStore } from '@/stores/usersStore';
 
 interface CreateStoryModalProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface CreateStoryModalProps {
 export const CreateStoryModal = ({ open, onOpenChange }: CreateStoryModalProps) => {
   const { user } = useAuthStore();
   const { addStory } = useStoriesStore();
+  const { getUser } = useUsersStore();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
@@ -55,12 +57,18 @@ export const CreateStoryModal = ({ open, onOpenChange }: CreateStoryModalProps) 
 
     setUploading(true);
     try {
+      const username = user.user_metadata?.username || user.email?.split('@')[0] || 'user';
+      
+      // Get the stored user to use their current avatar
+      const storedUser = getUser(user.id);
+      const avatar = storedUser?.avatarUrl || user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+      
       // Add story to store with preview
       addStory({
         id: `story-${Date.now()}`,
         userId: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
-        avatarUrl: user.user_metadata?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+        username: username,
+        avatarUrl: avatar,
         mediaUrl: preview,
         mediaType: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
         caption: caption || undefined,

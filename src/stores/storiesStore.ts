@@ -10,12 +10,16 @@ interface Story {
   mediaType: 'image' | 'video';
   caption?: string;
   createdAt: Date;
+  views: string[]; // Array of user IDs who viewed the story
+  viewsCount: number;
 }
 
 interface StoriesState {
   stories: Story[];
-  addStory: (story: Story) => void;
+  addStory: (story: Omit<Story, 'views' | 'viewsCount'>) => void;
+  addView: (storyId: string, userId: string) => void;
   getUserStories: (userId: string) => Story[];
+  getStoryViews: (storyId: string) => string[];
   getAllStories: () => { userId: string; username: string; avatarUrl: string; stories: Story[]; hasUnread: boolean }[];
 }
 
@@ -31,13 +35,30 @@ export const useStoriesStore = create<StoriesState>()(
   persist(
     (set, get) => ({
       stories: [],
+      
       addStory: (story) =>
         set((state) => ({
-          stories: [story, ...state.stories],
+          stories: [{ ...story, views: [], viewsCount: 0 }, ...state.stories],
         })),
+      
+      addView: (storyId, userId) =>
+        set((state) => ({
+          stories: state.stories.map((s) =>
+            s.id === storyId && !s.views.includes(userId)
+              ? { ...s, views: [...s.views, userId], viewsCount: s.viewsCount + 1 }
+              : s
+          ),
+        })),
+      
       getUserStories: (userId) => {
         return get().stories.filter((s) => s.userId === userId);
       },
+      
+      getStoryViews: (storyId) => {
+        const story = get().stories.find((s) => s.id === storyId);
+        return story?.views || [];
+      },
+      
       getAllStories: () => {
         const { stories } = get();
         const now = new Date();
@@ -68,6 +89,44 @@ export const useStoriesStore = create<StoriesState>()(
     }),
     {
       name: 'stories-storage',
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            const { state } = JSON.parse(str);
+            
+            // Validate that stories is an array
+            if (!state.stories || !Array.isArray(state.stories)) {
+              console.warn('Invalid stories data in localStorage, resetting...');
+              return null;
+            }
+            
+            return {
+              state: {
+                ...state,
+                stories: state.stories.map((story: any) => ({
+                  ...story,
+                  createdAt: new Date(story.createdAt)
+                }))
+              }
+            };
+          } catch (error) {
+            console.error('Error loading stories from localStorage:', error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (error) {
+            console.error('Error saving stories to localStorage:', error);
+          }
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+        },
+      },
     }
   )
 );
