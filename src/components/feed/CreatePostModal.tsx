@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
 import { useUsersStore } from '@/stores/usersStore';
 import { toast } from 'sonner';
+import { uploadToCloudinary } from '@/lib/cloudinary';
+import { postsService } from '@/services/firebase/posts';
 
 export const CreatePostModal = () => {
   const { createPostOpen, setCreatePostOpen } = useUIStore();
@@ -45,26 +47,62 @@ export const CreatePostModal = () => {
 
     setUploading(true);
     try {
-      const username = user.user_metadata?.username || user.email?.split('@')[0] || 'user';
-      const fullName = user.user_metadata?.display_name || user.user_metadata?.username || 'User';
+      const username = user.displayName || user.email?.split('@')[0] || 'user';
+      const fullName = user.displayName || username;
       
-      // Get the stored user to use their current avatar
-      const storedUser = getUser(user.id);
-      const avatar = storedUser?.avatarUrl || user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+      const storedUser = getUser(user.uid);
+      const avatar = storedUser?.avatarUrl || user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
       
-      // Add post to store with current previews
-      addPost({
+      // Upload files to Cloudinary
+      toast.info('Uploading media...');
+      const uploadPromises = files.map(file => uploadToCloudinary(file));
+      const uploadedMedia = await Promise.all(uploadPromises);
+      
+      // Create post data
+      const postDataForStore = {
         user: {
-          id: user.id,
+          id: user.uid,
           username: username,
           avatar: avatar,
-          fullName: fullName
+          fullName: fullName,
         },
-        caption,
-        media: previews.map((preview, index) => ({
-          url: preview,
+        media: uploadedMedia.map((media, index) => ({
+          url: media.url,
           type: files[index].type.startsWith('video/') ? 'video' as const : 'image' as const
-        }))
+        })),
+        caption,
+      };
+
+      // Add to store immediately
+      addPost(postDataForStore);
+      
+      // Also save to Firebase in background (optional)
+      const postData = {
+        authorId: user.uid,
+        author: {
+          uid: user.uid,
+          username: username,
+          displayName: fullName,
+          avatarUrl: avatar,
+          bio: '',
+          stats: { posts: 0, followers: 0, following: 0 },
+          createdAt: new Date(),
+        },
+        media: uploadedMedia.map((media, index) => ({
+          url: media.url,
+          publicId: media.publicId,
+          type: files[index].type.startsWith('video/') ? 'video' as const : 'image' as const
+        })),
+        caption,
+        tags: [],
+        likesCount: 0,
+        commentsCount: 0,
+        likes: [],
+        likedBy: [],
+      };
+
+      postsService.createPost(postData).catch(error => {
+        console.error('Firebase save error:', error);
       });
       
       toast.success('Post created successfully!');
@@ -72,8 +110,9 @@ export const CreatePostModal = () => {
       setFiles([]);
       setPreviews([]);
       setCaption('');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create post');
+    } catch (error: unknown) {
+      console.error('Create post error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create post');
     } finally {
       setUploading(false);
     }

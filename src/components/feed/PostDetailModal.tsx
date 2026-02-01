@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { PostCard } from './PostCard';
 import type { Post } from '@/types';
 
@@ -13,6 +13,11 @@ export const PostDetailModal = ({ open, onOpenChange, post }: PostDetailModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <button className="...">
+          {/* content */}
+        </button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
         <PostCard post={post} />
       </DialogContent>

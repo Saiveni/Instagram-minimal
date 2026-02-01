@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth';
 
 const AuthPage = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -20,21 +21,13 @@ const AuthPage = () => {
 
   // Check if user is already logged in
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
-      }
-    };
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
         navigate('/');
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,30 +36,23 @@ const AuthPage = () => {
 
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              display_name: displayName,
-            },
-          },
-        });
-
-        if (error) throw error;
+        // Create user with Firebase
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Update display name
+        if (displayName) {
+          await updateProfile(userCredential.user, {
+            displayName: displayName,
+          });
+        }
 
         toast({
           title: 'Account created!',
           description: 'You have been signed in automatically.',
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
+        // Sign in with Firebase
+        await signInWithEmailAndPassword(auth, email, password);
 
         toast({
           title: 'Welcome back!',
@@ -74,12 +60,24 @@ const AuthPage = () => {
         });
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
       let message = error.message;
       
-      if (message.includes('User already registered')) {
+      // Handle Firebase error codes
+      if (error.code === 'auth/email-already-in-use') {
         message = 'An account with this email already exists. Try signing in instead.';
-      } else if (message.includes('Invalid login credentials')) {
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password should be at least 6 characters.';
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         message = 'Invalid email or password. Please try again.';
+      } else if (error.code === 'auth/network-request-failed') {
+        message = 'Network error. Please check your internet connection.';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Too many failed attempts. Please try again later.';
+      } else if (!message || message.includes('Firebase')) {
+        message = 'Authentication failed. Please try again.';
       }
 
       toast({
@@ -229,7 +227,35 @@ const AuthPage = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          {mode === 'signin' && (
+            <div className="mt-4 text-center">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">New here?</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => {
+                  setMode('signup');
+                  setEmail('');
+                  setPassword('');
+                  setDisplayName('');
+                }}
+                disabled={loading}
+              >
+                Create Account
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-4 text-center">
             <p className="text-sm text-muted-foreground">
               {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
               <button

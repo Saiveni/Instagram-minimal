@@ -16,7 +16,7 @@ interface Story {
 
 interface StoriesState {
   stories: Story[];
-  addStory: (story: Omit<Story, 'views' | 'viewsCount'>) => void;
+  addStory: (story: Omit<Story, 'id' | 'createdAt' | 'views' | 'viewsCount'>) => void;
   addView: (storyId: string, userId: string) => void;
   getUserStories: (userId: string) => Story[];
   getStoryViews: (storyId: string) => string[];
@@ -38,7 +38,13 @@ export const useStoriesStore = create<StoriesState>()(
       
       addStory: (story) =>
         set((state) => ({
-          stories: [{ ...story, views: [], viewsCount: 0 }, ...state.stories],
+          stories: [{ 
+            ...story, 
+            id: `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            createdAt: new Date(),
+            views: [], 
+            viewsCount: 0 
+          }, ...state.stories],
         })),
       
       addView: (storyId, userId) =>

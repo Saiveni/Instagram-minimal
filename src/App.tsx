@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from 'firebase/auth';
 import { useAuthStore } from "@/stores/authStore";
 import { useUsersStore } from "@/stores/usersStore";
 import HomePage from "./pages/Home";
@@ -16,7 +17,9 @@ import SearchPage from "./pages/Search";
 import ProfilePage from "./pages/Profile";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import NotificationsPage from '@/pages/Notifications';
+import SettingsPage from "./pages/Settings";
+import NotificationsPage from "./pages/Notifications";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -28,53 +31,44 @@ const AppContent = () => {
   useEffect(() => {
     if (user) {
       const username = user.email?.split('@')[0] || 'user';
-      const displayName = user.user_metadata?.display_name || username;
-      const avatar = user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+      const displayName = user.displayName || username;
+      const avatar = user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
       
       // Check if user exists in store
-      const existingUser = getUser(user.id);
+      const existingUser = getUser(user.uid);
       
       if (existingUser) {
-        // Update existing user with latest Supabase metadata (but keep stored avatar if it exists and is different)
-        updateUser(user.id, {
-          displayName: user.user_metadata?.display_name || existingUser.displayName,
-          bio: user.user_metadata?.bio || existingUser.bio,
-          // Keep the stored avatarUrl unless it's the default dicebear, then use Supabase if available
+        // Update existing user with latest Firebase metadata (but keep stored avatar if it exists and is different)
+        updateUser(user.uid, {
+          displayName: user.displayName || existingUser.displayName,
+          // Keep the stored avatarUrl unless it's the default dicebear, then use Firebase if available
           avatarUrl: existingUser.avatarUrl && !existingUser.avatarUrl.includes('dicebear') 
             ? existingUser.avatarUrl 
-            : user.user_metadata?.avatar_url || existingUser.avatarUrl,
+            : user.photoURL || existingUser.avatarUrl,
         });
       } else {
         // Add new user
         addUser({
-          uid: user.id,
+          uid: user.uid,
           username: username,
           displayName: displayName,
           avatarUrl: avatar,
-          bio: user.user_metadata?.bio || 'Welcome to my profile!',
+          bio: 'Welcome to my profile!',
           stats: { posts: 0, followers: 0, following: 0 },
-          createdAt: new Date(user.created_at),
+          createdAt: user.metadata.creationTime ? new Date(user.metadata.creationTime) : new Date(),
         });
       }
     }
   }, [user, addUser, getUser, updateUser]);
 
   useEffect(() => {
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Listen for Firebase auth changes
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setSession(firebaseUser);
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, [setSession, setLoading]);
 
   if (loading) {
@@ -103,6 +97,7 @@ const AppContent = () => {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
@@ -111,17 +106,19 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

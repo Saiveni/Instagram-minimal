@@ -38,9 +38,9 @@ export const CommentsModal = ({ open, onOpenChange, postId, postImage }: Comment
 
     const newComment: Comment = {
       id: Date.now().toString(),
-      userId: user.id,
+      userId: user.uid,
       username: user.email?.split('@')[0] || 'user',
-      avatarUrl: user.user_metadata?.avatar_url || '',
+      avatarUrl: user.photoURL || '',
       text: commentText,
       createdAt: new Date(),
       likesCount: 0,

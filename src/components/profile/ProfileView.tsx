@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings, Grid, Film, Bookmark, Camera, Loader2, LogOut } from 'lucide-react';
+import { Settings, Grid, Film, Bookmark, Camera, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +17,7 @@ import { PostDetailModal } from '@/components/feed/PostDetailModal';
 interface ProfileViewProps {
   profile: UserProfile;
   posts: Post[];
+  savedPosts?: Post[];
   reels: Reel[];
   isOwnProfile: boolean;
   isFollowing: boolean;
@@ -27,6 +29,7 @@ interface ProfileViewProps {
 export const ProfileView = ({
   profile,
   posts,
+  savedPosts = [],
   reels,
   isOwnProfile,
   isFollowing,
@@ -34,8 +37,8 @@ export const ProfileView = ({
   onEditProfile,
   onSignOut,
 }: ProfileViewProps) => {
+  const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [editData, setEditData] = useState({
     displayName: profile.displayName,
     bio: profile.bio,
@@ -65,13 +68,6 @@ export const ProfileView = ({
     onEditProfile(editData);
     setEditOpen(false);
     toast.success('Profile updated');
-  };
-
-  const handleSignOut = () => {
-    setSettingsOpen(false);
-    if (onSignOut) {
-      onSignOut();
-    }
   };
 
   const handlePostClick = (post: Post) => {
@@ -154,27 +150,9 @@ export const ProfileView = ({
                     </div>
                   </DialogContent>
                 </Dialog>
-                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Settings className="h-5 w-5" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Settings</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-2 py-4">
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-destructive/10 transition-colors text-destructive font-semibold"
-                      >
-                        <LogOut className="h-5 w-5" />
-                        <span>Log Out</span>
-                      </button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
+                  <Settings className="h-5 w-5" />
+                </Button>
               </div>
             ) : (
               <Button
@@ -304,11 +282,39 @@ export const ProfileView = ({
 
         {isOwnProfile && (
           <TabsContent value="saved" className="mt-4">
-            <div className="text-center py-12">
-              <Bookmark className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No Saved Posts</h3>
-              <p className="text-muted-foreground">Save photos and videos that you want to see again.</p>
-            </div>
+            {savedPosts.length === 0 ? (
+              <div className="text-center py-12">
+                <Bookmark className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Saved Posts</h3>
+                <p className="text-muted-foreground">Save photos and videos that you want to see again.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1">
+                {savedPosts.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="aspect-square bg-muted cursor-pointer hover:opacity-90 transition-opacity relative group"
+                    onClick={() => handlePostClick(post)}
+                  >
+                    {post.media[0]?.type === 'video' ? (
+                      <video
+                        src={post.media[0].url}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={post.media[0]?.url}
+                        alt={post.caption}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </TabsContent>
         )}
       </Tabs>

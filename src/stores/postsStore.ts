@@ -4,17 +4,23 @@ import type { Post } from '@/types';
 
 interface PostsState {
   posts: Post[];
+  savedPosts: { [userId: string]: string[] }; // userId -> postIds
   addPost: (post: Omit<Post, 'id' | 'createdAt' | 'likesCount' | 'commentsCount' | 'tags' | 'authorId' | 'likedBy'> & { user: { id: string; username: string; avatar: string; fullName: string }; media: { url: string; type: 'image' | 'video' }[]; caption: string }) => void;
   likePost: (postId: string, userId: string) => void;
   unlikePost: (postId: string, userId: string) => void;
   addComment: (postId: string) => void;
   deletePost: (postId: string) => void;
+  savePost: (postId: string, userId: string) => void;
+  unsavePost: (postId: string, userId: string) => void;
+  getSavedPosts: (userId: string) => Post[];
+  isPostSaved: (postId: string, userId: string) => boolean;
 }
 
 export const usePostsStore = create<PostsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       posts: [],
+      savedPosts: {},
       addPost: (postData) =>
         set((state) => ({
           posts: [
@@ -78,6 +84,29 @@ export const usePostsStore = create<PostsState>()(
         set((state) => ({
           posts: state.posts.filter((p) => p.id !== postId),
         })),
+      savePost: (postId, userId) =>
+        set((state) => ({
+          savedPosts: {
+            ...state.savedPosts,
+            [userId]: [...(state.savedPosts[userId] || []), postId],
+          },
+        })),
+      unsavePost: (postId, userId) =>
+        set((state) => ({
+          savedPosts: {
+            ...state.savedPosts,
+            [userId]: (state.savedPosts[userId] || []).filter(id => id !== postId),
+          },
+        })),
+      getSavedPosts: (userId) => {
+        const { posts, savedPosts } = get();
+        const savedPostIds = savedPosts[userId] || [];
+        return posts.filter(p => savedPostIds.includes(p.id));
+      },
+      isPostSaved: (postId, userId) => {
+        const { savedPosts } = get();
+        return (savedPosts[userId] || []).includes(postId);
+      },
     }),
     {
       name: 'posts-storage',

@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, UserPlus, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUsersStore } from '@/stores/usersStore';
+import { useAuthStore } from '@/stores/authStore';
 
 interface Notification {
   id: string;
   type: 'like' | 'comment' | 'follow';
+  userId: string;
   user: {
     username: string;
+    displayName: string;
     avatarUrl: string;
   };
   post?: {
@@ -21,14 +25,38 @@ interface Notification {
   read: boolean;
 }
 
-// Mock notifications data
-const mockNotifications: Notification[] = [
-  // You can populate this with real data later
-];
-
 export const NotificationsPopover = ({ children }: { children: React.ReactNode }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const { user } = useAuthStore();
+  const { users, followers } = useUsersStore();
+
+  // Generate notifications from followers
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    
+    const myFollowers = followers[user.uid] || [];
+    const followNotifications: Notification[] = myFollowers.map(followerId => {
+      const follower = users.find(u => u.uid === followerId);
+      if (!follower) return null;
+      
+      return {
+        id: `follow-${followerId}`,
+        type: 'follow' as const,
+        userId: followerId,
+        user: {
+          username: follower.username,
+          displayName: follower.displayName,
+          avatarUrl: follower.avatarUrl,
+        },
+        message: `${follower.displayName} started following you`,
+        timestamp: follower.createdAt || new Date(),
+        read: false,
+      };
+    }).filter(Boolean) as Notification[];
+
+    setNotifications(followNotifications);
+  }, [user, followers, users]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

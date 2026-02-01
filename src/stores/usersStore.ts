@@ -123,6 +123,7 @@ export const useUsersStore = create<UsersState>()(
                   createdAt: typeof user.createdAt === 'string' ? new Date(user.createdAt) : user.createdAt
                 })) : [],
                 following: state.following || {},
+                followers: state.followers || {},
               }
             };
           } catch (error: unknown) {

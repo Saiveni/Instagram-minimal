@@ -2,53 +2,81 @@ import { useState } from 'react';
 import { ConversationList } from '@/components/messages/ConversationList';
 import { ChatWindow } from '@/components/messages/ChatWindow';
 import { useAuthStore } from '@/stores/authStore';
+import { useMessagesStore } from '@/stores/messagesStore';
+import { useUsersStore } from '@/stores/usersStore';
 import type { Conversation, Message } from '@/types';
-
-// Real conversations will be fetched from database
-const mockConversations: Conversation[] = [];
-const mockMessages: Message[] = [];
 
 const MessagesPage = () => {
   const { user } = useAuthStore();
+  const { getUserConversations, getMessages, addMessage, getOrCreateConversation, markAsRead } = useMessagesStore();
+  const { getUser } = useUsersStore();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+
+  const conversations = user ? getUserConversations(user.uid) : [];
+  const messages = selectedConversation ? getMessages(selectedConversation.id) : [];
+
+  // Populate participant profiles
+  const conversationsWithProfiles = conversations.map(conv => ({
+    ...conv,
+    participantProfiles: conv.participants.map(uid => getUser(uid)).filter(Boolean),
+  }));
+
+  const selectedConversationWithProfiles = selectedConversation ? {
+    ...selectedConversation,
+    participantProfiles: selectedConversation.participants.map(uid => getUser(uid)).filter(Boolean),
+  } : null;
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
-    setMessages(mockMessages.filter((m) => m.conversationId === conversation.id));
+    if (user) {
+      markAsRead(conversation.id, user.uid);
+    }
   };
 
-  const handleSendMessage = (text: string) => {
-    if (!selectedConversation) return;
+  const handleSendMessage = (text: string, mediaUrl?: string, mediaType?: string) => {
+    if (!selectedConversation || !user) return;
+    if (!text.trim() && !mediaUrl) return;
 
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       conversationId: selectedConversation.id,
-      senderId: 'current',
+      senderId: user.uid,
       text,
+      mediaUrl,
       createdAt: new Date(),
-      readBy: [],
+      readBy: [user.uid],
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    addMessage(newMessage);
+  };
+
+  // Handler for starting a new conversation from ConversationList
+  const handleStartNewConversation = (otherUserId: string) => {
+    if (!user) return;
+    const conversation = getOrCreateConversation(user.uid, otherUserId);
+    setSelectedConversation(conversation);
   };
 
   return (
     <div className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] flex">
-      <div className="w-full md:w-80 lg:w-96">
+      {/* Conversation list - hide on mobile when chat is open */}
+      <div className={`w-full md:w-80 lg:w-96 ${selectedConversation ? 'hidden md:block' : 'block'}`}>
         <ConversationList
-          conversations={mockConversations}
+          conversations={conversationsWithProfiles}
           selectedId={selectedConversation?.id || null}
-          currentUserId="current"
+          currentUserId={user?.uid || 'current'}
           onSelect={handleSelectConversation}
+          onStartNewConversation={handleStartNewConversation}
         />
       </div>
-      <div className="hidden md:flex flex-1">
+      {/* Chat window - show on mobile when conversation selected */}
+      <div className={`flex-1 ${selectedConversation ? 'flex' : 'hidden md:flex'}`}>
         <ChatWindow
-          conversation={selectedConversation}
+          conversation={selectedConversationWithProfiles}
           messages={messages}
-          currentUserId="current"
+          currentUserId={user?.uid || 'current'}
           onSendMessage={handleSendMessage}
+          onBack={() => setSelectedConversation(null)}
         />
       </div>
     </div>

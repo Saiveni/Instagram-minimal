@@ -5,6 +5,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useUsersStore } from '@/stores/usersStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useMessagesStore } from '@/stores/messagesStore';
 import { toast } from 'sonner';
 
 interface User {
@@ -19,16 +22,19 @@ interface SharePostDialogProps {
   onOpenChange: (open: boolean) => void;
   postId: string;
   postImage?: string;
+  postCaption?: string;
 }
 
-// Real users will be fetched from database
-const mockUsers: User[] = [];
-
-export const SharePostDialog = ({ open, onOpenChange, postId, postImage }: SharePostDialogProps) => {
+export const SharePostDialog = ({ open, onOpenChange, postId, postImage, postCaption }: SharePostDialogProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const { getAllUsers } = useUsersStore();
+  const { user } = useAuthStore();
+  const { getOrCreateConversation, addMessage } = useMessagesStore();
 
-  const filteredUsers = mockUsers.filter(
+  const allUsers = getAllUsers().filter(u => u.uid !== user?.uid);
+
+  const filteredUsers = allUsers.filter(
     (user) =>
       user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.username.toLowerCase().includes(searchQuery.toLowerCase())
@@ -46,7 +52,23 @@ export const SharePostDialog = ({ open, onOpenChange, postId, postImage }: Share
       return;
     }
 
-    // In a real app, this would send the post to selected users
+    if (!user) return;
+
+    // Send post to each selected user via messages
+    selectedUsers.forEach(targetUserId => {
+      const conversation = getOrCreateConversation(user.uid, targetUserId);
+      const message = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        conversationId: conversation.id,
+        senderId: user.uid,
+        text: postCaption ? `Shared a post: ${postCaption.substring(0, 50)}${postCaption.length > 50 ? '...' : ''}` : 'Shared a post',
+        mediaUrl: postImage,
+        createdAt: new Date(),
+        readBy: [user.uid],
+      };
+      addMessage(message);
+    });
+
     toast.success(`Post shared with ${selectedUsers.length} user${selectedUsers.length > 1 ? 's' : ''}`);
     setSelectedUsers([]);
     setSearchQuery('');

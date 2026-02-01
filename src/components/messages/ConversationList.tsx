@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useUsersStore } from '@/stores/usersStore';
+import { useAuthStore } from '@/stores/authStore';
 import type { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -14,16 +16,18 @@ interface ConversationListProps {
   selectedId: string | null;
   currentUserId: string;
   onSelect: (conversation: Conversation) => void;
+  onStartNewConversation?: (otherUserId: string) => void;
 }
 
-// Mock users data for search
-// Real users will be fetched from database
-const mockUsers: any[] = [];
-
-export const ConversationList = ({ conversations, selectedId, currentUserId, onSelect }: ConversationListProps) => {
+export const ConversationList = ({ conversations, selectedId, currentUserId, onSelect, onStartNewConversation }: ConversationListProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const { getAllUsers } = useUsersStore();
+  const { user } = useAuthStore();
+
+  // Get all users except current user
+  const allUsers = getAllUsers().filter(u => u.uid !== user?.uid);
 
   const filteredConversations = conversations.filter((conversation) => {
     const otherUser = conversation.participantProfiles?.find(p => p.uid !== currentUserId);
@@ -34,17 +38,21 @@ export const ConversationList = ({ conversations, selectedId, currentUserId, onS
     );
   });
 
-  const filteredUsers = mockUsers.filter((user) =>
-    user.displayName.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    user.username.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
+  const filteredUsers = userSearchQuery 
+    ? allUsers.filter((user) =>
+        user.displayName.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+        user.username.toLowerCase().includes(userSearchQuery.toLowerCase())
+      )
+    : allUsers;
 
-  const handleStartChat = (user: typeof mockUsers[0]) => {
-    // This would create a new conversation with the selected user
-    // For now, we'll just close the dialog
+  const handleStartChat = (selectedUser: any) => {
+    // Create a new conversation with the selected user
     setSearchDialogOpen(false);
     setUserSearchQuery('');
-    // In a real app, you would create a new conversation here
+    
+    if (onStartNewConversation) {
+      onStartNewConversation(selectedUser.uid);
+    }
   };
 
   return (
@@ -73,9 +81,13 @@ export const ConversationList = ({ conversations, selectedId, currentUserId, onS
                   />
                 </div>
                 <ScrollArea className="h-[300px]">
-                  {filteredUsers.length === 0 ? (
+                  {allUsers.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">
-                      {userSearchQuery ? 'No users found' : 'Search for users to start chatting'}
+                      No users available to chat with
+                    </p>
+                  ) : filteredUsers.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">
+                      No users found matching "{userSearchQuery}"
                     </p>
                   ) : (
                     filteredUsers.map((user) => (
@@ -114,9 +126,21 @@ export const ConversationList = ({ conversations, selectedId, currentUserId, onS
 
       <div className="flex-1 overflow-y-auto">
         {filteredConversations.length === 0 ? (
-          <p className="p-4 text-center text-muted-foreground text-sm">
-            {searchQuery ? 'No conversations found' : 'No conversations yet'}
-          </p>
+          <div className="p-4 text-center">
+            <p className="text-muted-foreground text-sm mb-4">
+              {searchQuery ? 'No conversations found' : 'No conversations yet'}
+            </p>
+            {!searchQuery && (
+              <Button 
+                variant="outline" 
+                onClick={() => setSearchDialogOpen(true)}
+                className="gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Start a conversation
+              </Button>
+            )}
+          </div>
         ) : (
           filteredConversations.map((conversation, index) => {
             const otherUser = conversation.participantProfiles?.find(p => p.uid !== currentUserId);

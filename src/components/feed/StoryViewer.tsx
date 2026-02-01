@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Heart, Send, MoreHorizontal, ChevronLeft, ChevronRight, Pause, Play, Eye } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuthStore } from '@/stores/authStore';
 import { useStoriesStore } from '@/stores/storiesStore';
+import { useUsersStore } from '@/stores/usersStore';
 
 interface Story {
   id: string;
@@ -36,28 +38,33 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
   const [isPaused, setIsPaused] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [showViews, setShowViews] = useState(false);
+  const [viewsModalOpen, setViewsModalOpen] = useState(false);
   const { user } = useAuthStore();
-  const { addView } = useStoriesStore();
+  const { addView, getStoryViews } = useStoriesStore();
+  const { getUser } = useUsersStore();
 
-  const currentStory = stories[currentStoryIndex];
+  // Safety check - if stories array is empty or index is out of bounds, close the viewer
+  const safeStories = Array.isArray(stories) ? stories : [];
+  const safeIndex = Math.min(Math.max(0, currentStoryIndex), Math.max(0, safeStories.length - 1));
+  const currentStory = safeStories[safeIndex];
   const duration = 5000; // 5 seconds per story
 
   // Track story view when story changes
   useEffect(() => {
     if (open && currentStory && user && !isOwnStory) {
-      addView(currentStory.id, user.id);
+      addView(currentStory.id, user.uid);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, currentStory?.id, user?.id, isOwnStory]);
+  }, [open, currentStory?.id, user?.uid, isOwnStory]);
 
   useEffect(() => {
-    if (!open || isPaused) return;
+    if (!open || isPaused || safeStories.length === 0) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           // Move to next story
-          if (currentStoryIndex < stories.length - 1) {
+          if (currentStoryIndex < safeStories.length - 1) {
             setCurrentStoryIndex(currentStoryIndex + 1);
             return 0;
           } else {
@@ -71,15 +78,15 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
     }, 100);
 
     return () => clearInterval(interval);
-  }, [open, isPaused, currentStoryIndex, stories.length, duration, onOpenChange]);
+  }, [open, isPaused, currentStoryIndex, safeStories.length, duration, onOpenChange]);
 
   useEffect(() => {
     if (open) {
-      setCurrentStoryIndex(initialIndex);
+      setCurrentStoryIndex(Math.min(initialIndex, Math.max(0, safeStories.length - 1)));
       setProgress(0);
       setShowViews(false);
     }
-  }, [open, initialIndex]);
+  }, [open, initialIndex, safeStories.length]);
 
   const handlePrevious = () => {
     if (currentStoryIndex > 0) {
@@ -89,7 +96,7 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
   };
 
   const handleNext = () => {
-    if (currentStoryIndex < stories.length - 1) {
+    if (currentStoryIndex < safeStories.length - 1) {
       setCurrentStoryIndex(currentStoryIndex + 1);
       setProgress(0);
     } else {
@@ -104,6 +111,23 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
     setReplyText('');
   };
 
+  const viewersList = isOwnStory ? getStoryViews(currentStory.id).map(userId => getUser(userId)).filter(Boolean) : [];
+
+  // Safe date formatting
+  const getTimeAgo = useMemo(() => {
+    if (!currentStory?.createdAt) return '';
+    try {
+      const date = currentStory.createdAt instanceof Date 
+        ? currentStory.createdAt 
+        : new Date(currentStory.createdAt);
+      if (isNaN(date.getTime())) return '';
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error('Error formatting story date:', error);
+      return '';
+    }
+  }, [currentStory?.createdAt]);
+
   if (!currentStory) return null;
 
   return (
@@ -112,7 +136,7 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
         <div className="relative h-full flex flex-col">
           {/* Progress bars */}
           <div className="absolute top-0 left-0 right-0 z-20 flex gap-1 p-2">
-            {stories.map((_, index) => (
+            {safeStories.map((_, index) => (
               <div key={index} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-white transition-all"
@@ -139,16 +163,24 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
               <div>
                 <p className="text-white text-sm font-semibold">{currentStory.username}</p>
                 <p className="text-white/70 text-xs">
-                  {formatDistanceToNow(currentStory.createdAt, { addSuffix: true })}
+                  {getTimeAgo}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {isOwnStory && currentStory.viewsCount !== undefined && (
-                <div className="flex items-center gap-1 text-white text-sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 text-white hover:bg-white/20 h-auto py-1 px-2"
+                  onClick={() => {
+                    setIsPaused(true);
+                    setViewsModalOpen(true);
+                  }}
+                >
                   <Eye className="h-4 w-4" />
-                  <span>{currentStory.viewsCount}</span>
-                </div>
+                  <span className="text-sm">{currentStory.viewsCount}</span>
+                </Button>
               )}
               <Button
                 variant="ghost"
@@ -208,7 +240,7 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
                 <ChevronLeft className="h-8 w-8" />
               </Button>
             )}
-            {currentStoryIndex < stories.length - 1 && (
+            {currentStoryIndex < safeStories.length - 1 && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -246,6 +278,38 @@ export const StoryViewer = ({ open, onOpenChange, stories, initialIndex = 0, isO
             </Button>
           </div>
         </div>
+
+        {/* Views Modal */}
+        <Dialog open={viewsModalOpen} onOpenChange={(open) => {
+          setViewsModalOpen(open);
+          if (!open) setIsPaused(false);
+        }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Viewed by {currentStory.viewsCount}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[400px]">
+              <div className="space-y-3">
+                {viewersList.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No views yet</p>
+                ) : (
+                  viewersList.map((viewer: any) => (
+                    <div key={viewer.uid} className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={viewer.avatarUrl} />
+                        <AvatarFallback>{viewer.username[0]?.toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{viewer.displayName}</p>
+                        <p className="text-xs text-muted-foreground">@{viewer.username}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

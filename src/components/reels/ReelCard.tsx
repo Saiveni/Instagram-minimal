@@ -3,6 +3,11 @@ import { motion } from 'framer-motion';
 import { Heart, MessageCircle, Send, Music, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { usePostsStore } from '@/stores/postsStore';
+import { useUsersStore } from '@/stores/usersStore';
+import { useAuthStore } from '@/stores/authStore';
+import { SharePostDialog } from '@/components/feed/SharePostDialog';
+import { CommentsModal } from '@/components/feed/CommentsModal';
 import type { Reel } from '@/types';
 
 interface ReelCardProps {
@@ -15,6 +20,13 @@ export const ReelCard = ({ reel, isActive }: ReelCardProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const { user } = useAuthStore();
+  const { likePost, unlikePost } = usePostsStore();
+  const { followUser, unfollowUser, isFollowing } = useUsersStore();
+
+  const isFollowingAuthor = user && reel.authorId ? isFollowing(user.uid, reel.authorId) : false;
 
   useEffect(() => {
     if (videoRef.current) {
@@ -46,6 +58,28 @@ export const ReelCard = ({ reel, isActive }: ReelCardProps) => {
     }
   };
 
+  const handleLike = () => {
+    if (!user) return;
+    const newLikedState = !liked;
+    setLiked(newLikedState);
+    
+    if (newLikedState) {
+      likePost(reel.id, user.uid);
+    } else {
+      unlikePost(reel.id, user.uid);
+    }
+  };
+
+  const handleFollow = () => {
+    if (!user || !reel.authorId) return;
+    
+    if (isFollowingAuthor) {
+      unfollowUser(user.uid, reel.authorId);
+    } else {
+      followUser(user.uid, reel.authorId);
+    }
+  };
+
   return (
     <div className="relative h-full w-full bg-black snap-start">
       <video
@@ -69,19 +103,25 @@ export const ReelCard = ({ reel, isActive }: ReelCardProps) => {
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-6">
         <motion.button
           whileTap={{ scale: 0.8 }}
-          onClick={() => setLiked(!liked)}
+          onClick={handleLike}
           className="flex flex-col items-center gap-1"
         >
           <Heart className={`h-7 w-7 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
           <span className="text-white text-xs">{(reel.likesCount + (liked ? 1 : 0)).toLocaleString()}</span>
         </motion.button>
 
-        <button className="flex flex-col items-center gap-1">
+        <button 
+          className="flex flex-col items-center gap-1"
+          onClick={() => setCommentsOpen(true)}
+        >
           <MessageCircle className="h-7 w-7 text-white" />
           <span className="text-white text-xs">{reel.commentsCount}</span>
         </button>
 
-        <button className="flex flex-col items-center gap-1">
+        <button 
+          className="flex flex-col items-center gap-1"
+          onClick={() => setShareOpen(true)}
+        >
           <Send className="h-7 w-7 text-white" />
           <span className="text-white text-xs">Share</span>
         </button>
@@ -103,9 +143,16 @@ export const ReelCard = ({ reel, isActive }: ReelCardProps) => {
             <AvatarFallback>{reel.author?.username?.[0]?.toUpperCase()}</AvatarFallback>
           </Avatar>
           <span className="text-white font-semibold">{reel.author?.username}</span>
-          <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/20">
-            Follow
-          </Button>
+          {user && reel.authorId !== user.uid && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-white border-white hover:bg-white/20"
+              onClick={handleFollow}
+            >
+              {isFollowingAuthor ? 'Following' : 'Follow'}
+            </Button>
+          )}
         </div>
 
         <p className="text-white text-sm line-clamp-2">{reel.caption}</p>
@@ -115,6 +162,22 @@ export const ReelCard = ({ reel, isActive }: ReelCardProps) => {
           <span className="text-xs">Original audio</span>
         </div>
       </div>
+
+      {/* Share Dialog */}
+      <SharePostDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        postId={reel.id}
+        postImage={reel.videoUrl}
+        postCaption={reel.caption}
+      />
+
+      {/* Comments Modal */}
+      <CommentsModal
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        postId={reel.id}
+      />
     </div>
   );
 };

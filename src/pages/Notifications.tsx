@@ -6,53 +6,52 @@ import { Heart, MessageCircle, UserPlus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUsersStore } from '@/stores/usersStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationsStore } from '@/stores/notificationsStore';
 import { formatDistanceToNow } from 'date-fns';
 
-interface Notification {
-  id: string;
-  type: 'like' | 'comment' | 'follow';
-  user: {
-    username: string;
-    avatarUrl: string;
-  };
-  post?: {
-    imageUrl: string;
-  };
-  message: string;
-  timestamp: Date;
-  read: boolean;
-}
-
 const NotificationsPage = () => {
-  const { users, isFollowing, followUser, unfollowUser } = useUsersStore();
+  const { users, isFollowing, followUser, unfollowUser, getUser, following } = useUsersStore();
   const { user } = useAuthStore();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { 
+    getUserNotifications, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification, 
+    getUnreadCount 
+  } = useNotificationsStore();
+
+  // Get notifications for current user
+  const notifications = user ? getUserNotifications(user.uid) : [];
+  const unreadCount = user ? getUnreadCount(user.uid) : 0;
+
+  // Get current user's following list to trigger re-render
+  const currentUserFollowing = user ? (following[user.uid] || []) : [];
 
   // Filter out current user
-  const otherUsers = users.filter(u => u.uid !== user?.id);
+  const otherUsers = users.filter(u => u.uid !== user?.uid);
 
   const handleFollow = (targetUserId: string) => {
     if (!user) return;
     
-    if (isFollowing(user.id, targetUserId)) {
-      unfollowUser(user.id, targetUserId);
+    if (isFollowing(user.uid, targetUserId)) {
+      unfollowUser(user.uid, targetUserId);
     } else {
-      followUser(user.id, targetUserId);
+      followUser(user.uid, targetUserId);
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    );
+  const handleMarkAsRead = (id: string) => {
+    markAsRead(id);
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const handleMarkAllAsRead = () => {
+    if (user) {
+      markAllAsRead(user.uid);
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const handleDeleteNotification = (id: string) => {
+    deleteNotification(id);
   };
 
   const getNotificationIcon = (type: string) => {
@@ -67,8 +66,6 @@ const NotificationsPage = () => {
         return null;
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
@@ -92,7 +89,7 @@ const NotificationsPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={markAllAsRead}
+                  onClick={handleMarkAllAsRead}
                   className="text-xs text-primary"
                 >
                   Mark all as read
@@ -112,60 +109,56 @@ const NotificationsPage = () => {
               </div>
             ) : (
               <AnimatePresence>
-                {notifications.map((notification) => (
-                  <motion.div
-                    key={notification.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className={`flex items-start gap-3 p-4 rounded-lg hover:bg-muted/50 transition-colors border ${
-                      !notification.read ? 'bg-primary/5' : ''
-                    }`}
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={notification.user.avatarUrl} />
-                        <AvatarFallback>
-                          {notification.user.username[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">
-                        <span className="font-semibold">{notification.user.username}</span>{' '}
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
-                      </p>
-                    </div>
-
-                    {notification.post?.imageUrl && (
-                      <img
-                        src={notification.post.imageUrl}
-                        alt="Post"
-                        className="h-10 w-10 rounded object-cover"
-                      />
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notification.id);
-                      }}
+                {notifications.map((notification) => {
+                  const notificationUser = getUser(notification.userId);
+                  
+                  return (
+                    <motion.div
+                      key={notification.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className={`flex items-start gap-3 p-4 rounded-lg hover:bg-muted/50 transition-colors border ${
+                        !notification.read ? 'bg-primary/5' : ''
+                      }`}
+                      onClick={() => handleMarkAsRead(notification.id)}
                     >
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={notificationUser?.avatarUrl} />
+                          <AvatarFallback>
+                            {notificationUser?.username?.[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">
+                          <span className="font-semibold">{notificationUser?.username}</span>{' '}
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteNotification(notification.id);
+                        }}
+                      >
                       <X className="h-3 w-3" />
                     </Button>
                   </motion.div>
-                ))}
+                );
+                })}
               </AnimatePresence>
             )}
           </div>
@@ -207,11 +200,11 @@ const NotificationsPage = () => {
                   </div>
                   <Button
                     size="sm"
-                    variant={isFollowing(user?.id || '', profile.uid) ? 'secondary' : 'default'}
+                    variant={currentUserFollowing.includes(profile.uid) ? 'secondary' : 'default'}
                     onClick={() => handleFollow(profile.uid)}
                     className="flex-shrink-0"
                   >
-                    {isFollowing(user?.id || '', profile.uid) ? 'Following' : 'Follow'}
+                    {currentUserFollowing.includes(profile.uid) ? 'Following' : 'Follow'}
                   </Button>
                 </motion.div>
               ))}

@@ -14,12 +14,15 @@ import type { Post } from '@/types';
 
 const SearchPage = () => {
   const { posts } = usePostsStore();
-  const { users, isFollowing, followUser, unfollowUser } = useUsersStore();
+  const { users, isFollowing, followUser, unfollowUser, following } = useUsersStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [postDetailOpen, setPostDetailOpen] = useState(false);
+
+  // Get current user's following list to trigger re-render
+  const currentUserFollowing = user ? (following[user.uid] || []) : [];
 
   // Filter posts based on search query
   const filteredPosts = posts.filter(post => 
@@ -29,7 +32,7 @@ const SearchPage = () => {
 
   // Filter users based on search query
   const filteredUsers = users.filter(u => 
-    u.uid !== user?.id && (
+    u.uid !== user?.uid && (
       u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -38,10 +41,10 @@ const SearchPage = () => {
   const handleFollow = (targetUserId: string) => {
     if (!user) return;
     
-    if (isFollowing(user.id, targetUserId)) {
-      unfollowUser(user.id, targetUserId);
+    if (isFollowing(user.uid, targetUserId)) {
+      unfollowUser(user.uid, targetUserId);
     } else {
-      followUser(user.id, targetUserId);
+      followUser(user.uid, targetUserId);
     }
   };
 
@@ -141,10 +144,10 @@ const SearchPage = () => {
                   </div>
                   <Button
                     size="sm"
-                    variant={isFollowing(user?.id || '', profile.uid) ? 'secondary' : 'default'}
+                    variant={currentUserFollowing.includes(profile.uid) ? 'secondary' : 'default'}
                     onClick={() => handleFollow(profile.uid)}
                   >
-                    {isFollowing(user?.id || '', profile.uid) ? 'Following' : 'Follow'}
+                    {currentUserFollowing.includes(profile.uid) ? 'Following' : 'Follow'}
                   </Button>
                 </motion.div>
               ))}

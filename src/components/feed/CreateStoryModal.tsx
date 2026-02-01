@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { useStoriesStore } from '@/stores/storiesStore';
 import { useUsersStore } from '@/stores/usersStore';
+import { uploadToCloudinary } from '@/lib/cloudinary';
+import { storiesService } from '@/services/firebase/stories';
 
 interface CreateStoryModalProps {
   open: boolean;
@@ -57,22 +59,34 @@ export const CreateStoryModal = ({ open, onOpenChange }: CreateStoryModalProps) 
 
     setUploading(true);
     try {
-      const username = user.user_metadata?.username || user.email?.split('@')[0] || 'user';
+      const username = user.displayName || user.email?.split('@')[0] || 'user';
+      const storedUser = getUser(user.uid);
+      const avatar = storedUser?.avatarUrl || user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
       
-      // Get the stored user to use their current avatar
-      const storedUser = getUser(user.id);
-      const avatar = storedUser?.avatarUrl || user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+      // Upload to Cloudinary
+      toast.info('Uploading story...');
+      const { url } = await uploadToCloudinary(file);
       
-      // Add story to store with preview
+      // Add to store immediately
       addStory({
-        id: `story-${Date.now()}`,
-        userId: user.id,
+        userId: user.uid,
         username: username,
         avatarUrl: avatar,
-        mediaUrl: preview,
-        mediaType: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
+        mediaUrl: url,
+        mediaType: file.type.startsWith('video/') ? 'video' : 'image',
         caption: caption || undefined,
-        createdAt: new Date()
+      });
+      
+      // Also save to Firebase in background (optional)
+      storiesService.createStory({
+        userId: user.uid,
+        username: username,
+        avatarUrl: avatar,
+        mediaUrl: url,
+        mediaType: file.type.startsWith('video/') ? 'video' : 'image',
+        caption: caption || undefined,
+      }).catch(error => {
+        console.error('Firebase save error:', error);
       });
       
       toast.success('Story posted successfully!');
@@ -81,7 +95,8 @@ export const CreateStoryModal = ({ open, onOpenChange }: CreateStoryModalProps) 
       setPreview('');
       setCaption('');
     } catch (error) {
-      toast.error('Failed to post story');
+      console.error('Create story error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to post story');
     } finally {
       setUploading(false);
     }

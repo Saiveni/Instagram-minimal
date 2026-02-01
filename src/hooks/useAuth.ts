@@ -1,58 +1,54 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 export const useAuth = () => {
-  const { user, session, loading, setSession, setLoading } = useAuthStore();
+  const { user, session, loading, setUser, setLoading } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Set up Firebase auth state listener
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [setSession, setLoading]);
+    return () => unsubscribe();
+  }, [setUser, setLoading]);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { data, error };
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return { data: userCredential, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          display_name: displayName,
-        },
-      },
-    });
-    return { data, error };
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (displayName && userCredential.user) {
+        await updateProfile(userCredential.user, { displayName });
+      }
+      
+      return { data: userCredential, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    try {
+      await firebaseSignOut(auth);
       navigate('/auth');
+      return { error: null };
+    } catch (error) {
+      return { error };
     }
-    return { error };
   };
 
   return {

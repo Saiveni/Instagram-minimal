@@ -16,6 +16,7 @@ import { usePostsStore } from '@/stores/postsStore';
 import { CommentsModal } from './CommentsModal';
 import { SharePostDialog } from './SharePostDialog';
 import { SavePostDialog } from './SavePostDialog';
+import { useNotificationsStore } from '@/stores/notificationsStore';
 import type { Post } from '@/types';
 
 interface PostCardProps {
@@ -26,7 +27,8 @@ interface PostCardProps {
 
 export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
   const { user } = useAuthStore();
-  const { likePost, unlikePost, deletePost } = usePostsStore();
+  const { likePost, unlikePost, deletePost, savePost, unsavePost, isPostSaved } = usePostsStore();
+  const { addNotification } = useNotificationsStore();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
@@ -38,9 +40,12 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
 
   useEffect(() => {
     if (user && post.likes) {
-      setLiked(post.likes.includes(user.id));
+      setLiked(post.likes.includes(user.uid));
     }
-  }, [user, post.likes]);
+    if (user) {
+      setSaved(isPostSaved(post.id, user.uid));
+    }
+  }, [user, post.likes, post.id, isPostSaved]);
 
   const handleLike = () => {
     if (!user) return;
@@ -49,9 +54,20 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
     setLiked(newLikedState);
     
     if (newLikedState) {
-      likePost(post.id, user.id);
+      likePost(post.id, user.uid);
+      
+      // Send notification to post owner (if not liking own post)
+      if (post.authorId && post.authorId !== user.uid) {
+        addNotification({
+          type: 'like',
+          userId: user.uid,
+          targetUserId: post.authorId,
+          postId: post.id,
+          message: `${user.displayName || user.email?.split('@')[0]} liked your post`,
+        });
+      }
     } else {
-      unlikePost(post.id, user.id);
+      unlikePost(post.id, user.uid);
     }
     
     onLike?.(post.id);
@@ -61,7 +77,19 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
     if (!user || liked) return;
     
     setLiked(true);
-    likePost(post.id, user.id);
+    likePost(post.id, user.uid);
+    
+    // Send notification to post owner (if not liking own post)
+    if (post.authorId && post.authorId !== user.uid) {
+      addNotification({
+        type: 'like',
+        userId: user.uid,
+        targetUserId: post.authorId,
+        postId: post.id,
+        message: `${user.displayName || user.email?.split('@')[0]} liked your post`,
+      });
+    }
+    
     onLike?.(post.id);
     
     setShowHeart(true);
@@ -115,7 +143,8 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
 
       {/* Media */}
       <div 
-        className="relative aspect-square bg-muted cursor-pointer"
+        className="relative bg-muted cursor-pointer"
+        style={{ aspectRatio: post.media[currentMediaIndex]?.type === 'video' ? '9/16' : '1/1' }}
         onDoubleClick={handleDoubleTap}
       >
         {post.media[currentMediaIndex]?.type === 'image' ? (
@@ -128,7 +157,7 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
         ) : (
           <video
             src={post.media[currentMediaIndex]?.url}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-black"
             controls
           />
         )}
@@ -199,10 +228,13 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
             variant="ghost" 
             size="icon" 
             onClick={() => {
+              if (!user) return;
               if (saved) {
+                unsavePost(post.id, user.uid);
                 setSaved(false);
               } else {
-                setSaveOpen(true);
+                savePost(post.id, user.uid);
+                setSaved(true);
               }
             }}
             aria-label={saved ? 'Unsave' : 'Save'}
@@ -258,6 +290,7 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
         onOpenChange={setShareOpen}
         postId={post.id}
         postImage={post.media[0]?.url}
+        postCaption={post.caption}
       />
       <SavePostDialog
         open={saveOpen}
