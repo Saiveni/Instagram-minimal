@@ -232,8 +232,8 @@ export const Header = () => {
                 className={isActive('/profile') ? 'text-foreground' : 'text-muted-foreground'}
               >
                 <Link to="/profile" aria-label="Profile">
-                  <Avatar className="havatarU0 transition-all hover:ring-primary/50">
-                    <AvatarImage src={user.user_metadata?.avatar_url} alt={displayName} />
+                  <Avatar className="h-7 w-7 ring-2 ring-primary/20 transition-all hover:ring-primary/50">
+                    <AvatarImage src={avatarUrl} alt={displayName} />
                     <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Link>

@@ -70,10 +70,10 @@ const ReelsPage = () => {
   return (
     <div
       ref={containerRef}
-      className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] overflow-y-auto snap-y-mandatory scrollbar-hide"
+      className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
     >
       {reels.map((reel, index) => (
-        <div key={reel.id} className="h-full snap-start">
+        <div key={reel.id} className="h-full snap-start snap-always">
           <ReelCard reel={reel} isActive={index === activeIndex} />
         </div>
       ))}

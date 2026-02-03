@@ -30,7 +30,7 @@ export const CommentsModal = ({ open, onOpenChange, postId, postImage }: Comment
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User';
+  const displayName = user?.displayName || user?.email?.split('@')[0] || 'User';
 
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +111,7 @@ export const CommentsModal = ({ open, onOpenChange, postId, postImage }: Comment
             <form onSubmit={handleAddComment} className="border-t p-4">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarImage src={user?.photoURL || ''} />
                   <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <Input

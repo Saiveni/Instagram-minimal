@@ -124,7 +124,7 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
           </div>
         </Link>
         
-        {user?.id === post.authorId && (
+        {user?.uid === post.authorId && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -245,7 +245,7 @@ export const PostCard = ({ post, onLike, onComment }: PostCardProps) => {
 
         {/* Likes count */}
         <p className="font-semibold text-sm">
-          {(post.likesCount + (liked ? 1 : 0)).toLocaleString()} likes
+          {post.likesCount.toLocaleString()} likes
         </p>
 
         {/* Caption */}
